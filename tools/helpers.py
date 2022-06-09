@@ -28,6 +28,10 @@ def setup_logger(name, log_path=None):
 
 
 def get_config():
+    """
+    Read in a config.ini file and return the object. Assumes it's located in
+    the wrapper root folder and called config.ini
+    """
     converters = {"list": lambda x: [i.strip() for i in x.split(",")]}
     config = ConfigParser(converters=converters)
 
@@ -42,5 +46,35 @@ def get_config():
     return config
 
 
-def dir_to_samplesheet(scriptpath):
-    subprocess.run(scriptpath)
+def dir_to_samplesheet(scriptpath: str, fastqdir: str, strandedness: str) -> str:
+    """
+    Executes the nf-core fastq_dir_to_samplesheet.py script on a given dir with fastq files
+    """
+    ss_path = os.path.join(fastqdir, "samplesheet.csv")
+    command_args = [
+        "python",
+        scriptpath,
+        fastqdir,
+        ss_path,
+        "--strandedness",
+        strandedness,
+    ]
+
+    try:
+        subprocess.run(command_args)
+    except:
+        raise Exception(f"Could not execute {scriptpath}.")
+
+    return ss_path
+
+
+def sanitize_fastqdir(fastqdir: str):
+    """
+    Checks all files in a given fastq dir that assumptions about naming is met.
+    For now this only checks file endings, but could be expanded to check for samples with more than 2 files.
+    """
+    for filename in os.listdir(fastqdir):
+        if not filename.endswith(".fastq.gz"):
+            raise Exception(
+                f"Found a file not ending with .fastq.gz in fastq dir: {filename}"
+            )

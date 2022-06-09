@@ -45,3 +45,11 @@ nextflow /apps/bio/repos/nf-core/nf-core-rnafusion-2.0.0/workflow/main.nf
     ---cosmic_username <username>
     --cosmic_passwd <password>  
 ```
+
+## Usage
+### Input data
+* The wrapper takes a directory with gzipped fastq files as input. There should only be two files per sample. If there are more, please concatenate them before running the wwrapper
+
+
+## TODO
+* Allow for more than 2 input files per sample
