@@ -1,6 +1,10 @@
 # qd-rnaseq-wrapper
 This is a wrapper for starting nf-core/rnaseq and nf-core/rnafusion on a set of fastq files
 
+## Dependencies
+The wrapper itself is written in python and has a few python modules as dependencies. The main dependency is nextflow.
+All these are handled by a conda environment which can be activated before running the wrapper.
+
 ## Pipeline installation
 The wrapper use two nf-core pipelines, [nf-core/rnaseq](https://nf-co.re/rnaseq) and [nf-core/rnafusion](https://nf-co.re/rnafusion/2.0.0).
 Both pipelines were downloaded using the [nf-core tools suite](https://nf-co.re/tools/).
