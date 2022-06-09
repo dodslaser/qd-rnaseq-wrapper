@@ -44,6 +44,14 @@ def main(fastqdir, outdir, strandedness):
         logger.error(e)
         sys.exit(1)
 
+    # Start pipelines
+    # Start rnaseq
+    rnaseq_command = []
+    nextflow_config = config.get("nextflow", "custom_config")
+
+
+    #Start rnafusion
+
 
 if __name__ == "__main__":
     main()
