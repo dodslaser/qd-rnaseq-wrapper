@@ -2,6 +2,8 @@ import os
 import sys
 import click
 import datetime
+import threading
+import subprocess
 from tools.helpers import (
     setup_logger,
     get_config,
@@ -18,7 +20,10 @@ from tools.helpers import (
 )
 @click.option("--outdir", required=True, help="Path to output directory")
 @click.option("--strandedness", default="reverse", help="Strandedness of seq libraries")
-def main(fastqdir, outdir, strandedness):
+@click.option("--testrun", is_flag=True, help="Run with nf-core test data")
+@click.option("--skip-rnaseq", is_flag=True, help="Skip the nf-core/rnaseq pipeline")
+@click.option("--skip-rnafusion", is_flag=True, help="Skip the nf-core/rnafusion pipeline")
+def main(fastqdir, outdir, strandedness, testrun, skip_rnaseq, skip_rnafusion):
     # Set up the logger function
     now = datetime.datetime.now()
     logfile = os.path.join(outdir, "QD-rnaseq" + now.strftime("%y%m%d_%H%M%S") + ".log")
@@ -47,10 +52,28 @@ def main(fastqdir, outdir, strandedness):
         sys.exit(1)
 
     # Start pipelines
-    # Build the rnaseq command
-    rnaseq_command = build_rnaseq_command(config, outdir, ss_path)
-    # Build the rnafusion command
-    rnafusion_command = build_rnafusion_command(config, outdir, ss_path)
+    # Set up the threading
+    def call_script(args):
+        subprocess.call(args)
+    threads = []
+
+    # Build the rnaseq command and add to threads
+    if not skip_rnaseq:
+        logger.info("Starting the nf-core/rnaseq pipeline")
+        rnaseq_command = build_rnaseq_command(config, outdir, ss_path, testrun)
+        threads.append(threading.Thread(target=call_script, args=rnaseq_command))
+
+    # Build the rnafusion command and add to threads
+    if not skip_rnafusion:
+        logger.info("Starting the nf-core/rnafusion pipeline")
+        rnafusion_command = build_rnafusion_command(config, outdir, ss_path, testrun)
+        threads.append(threading.Thread(target=call_script, args=rnafusion_command))
+
+    # Start both pipelines in parallel
+    for t in threads:
+        t.start()
+    for u in threads: # Waits for all threads to finish
+        u.join()
 
 
 if __name__ == "__main__":

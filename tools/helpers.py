@@ -49,6 +49,10 @@ def get_config():
 def dir_to_samplesheet(scriptpath: str, fastqdir: str, strandedness: str) -> str:
     """
     Executes the nf-core fastq_dir_to_samplesheet.py script on a given dir with fastq files
+    :param scriptpath: Path to fastq_dir_to_samplesheet.py
+    :param fastqdir: Path to directory with fastq files
+    :param strandedness: Strandedness of library
+    :return: Path to the generated samplesheet.csv
     """
     ss_path = os.path.join(fastqdir, "samplesheet.csv")
     command_args = [
@@ -80,8 +84,17 @@ def sanitize_fastqdir(fastqdir: str):
             )
 
 
-def build_rnaseq_command(config: str, outdir: str ,ss_path: str) -> list:
-    rnaseq_command = ['nextflow']
+def build_rnaseq_command(config, outdir: str, ss_path: str, testrun=False) -> list:
+    """
+    Create a list with the nextflow commands to send to subprocess
+
+    :param config: configparser object with configurations
+    :param outdir: Path to output directory
+    :param ss_path: Path to samplesheet.csv
+    :param: testrun: Set to true to run test data
+    :return: List with all components of the command
+    """
+    rnaseq_command = ["nextflow"]
     # Path to main.nf
     rnaseq_command.append(config.get("nextflow", "rnaseq"))
 
@@ -106,11 +119,32 @@ def build_rnaseq_command(config: str, outdir: str ,ss_path: str) -> list:
     rnaseq_command.append("--outdir")
     rnaseq_command.append(os.path.join(outdir, "rnaseq"))
 
-    return rnaseq_command
+    if testrun:
+        return [[
+                "nextflow",
+                config.get("nextflow", "rnaseq"),
+                "-profile",
+                "singularity,byss,test",
+                "-c",
+                "/apps/bio/repos/nf-core-configs/conf/medair.config",
+                "--outdir",
+                config.get("nextflow", "test_outdir"),
+                ]]
+    else:
+        return rnaseq_command
 
 
-def build_rnafusion_command(config: str, outdir: str ,ss_path: str) -> list:
-    rnafusion_command = ['nextflow']
+def build_rnafusion_command(config, outdir: str, ss_path: str, testrun=False) -> list:
+    """
+    Create a list with the nextflow commands to send to subprocess
+
+    :param config: configparser object with configurations
+    :param outdir: Path to output directory
+    :param ss_path: Path to samplesheet.csv
+    :param: testrun: Set to true to run test data
+    :return: List with all components of the command
+    """
+    rnafusion_command = ["nextflow"]
     # Path to main.nf
     rnafusion_command.append(config.get("nextflow", "rnafusion"))
 
@@ -138,4 +172,18 @@ def build_rnafusion_command(config: str, outdir: str ,ss_path: str) -> list:
     rnafusion_command.append("--outdir")
     rnafusion_command.append(os.path.join(outdir, "rnafusion"))
 
-    return rnafusion_command
+    if testrun:
+        return [[
+                "nextflow",
+                config.get("nextflow", "rnafusion"),
+                "-c",
+                "/apps/bio/repos/nf-core-configs/conf/medair.config",
+                "-profile",
+                "singularity,byss,test",
+                "--outdir",
+                config.get("nextflow", "test_outdir"),
+                "--genomes_base",
+                config.get("nextflow", "dependencies_fusion"),
+                ]]
+    else:
+        return rnafusion_command
