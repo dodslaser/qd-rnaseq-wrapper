@@ -130,7 +130,7 @@ def build_rnaseq_command(config, outdir: str, ss_path: str, testrun=False) -> li
                 "-c",
                 "/apps/bio/repos/nf-core-configs/conf/medair.config",
                 "--outdir",
-                config.get("nextflow", "test_outdir"),
+                os.path.join(config.get("nextflow", "test_outdir"), "rnaseq"),
                 ]]
     else:
         return rnaseq_command
@@ -185,7 +185,7 @@ def build_rnafusion_command(config, outdir: str, ss_path: str, testrun=False) ->
                 "--outdir",
                 config.get("nextflow", "test_outdir"),
                 "--genomes_base",
-                config.get("nextflow", "dependencies_fusion"),
+                os.path.join(config.get("nextflow", "dependencies_fusion"), "rnafusion"),
                 ]]
     else:
         return rnafusion_command
