@@ -7,6 +7,8 @@ from tools.helpers import (
     get_config,
     dir_to_samplesheet,
     sanitize_fastqdir,
+    build_rnaseq_command,
+    build_rnafusion_command,
 )
 
 
@@ -45,12 +47,10 @@ def main(fastqdir, outdir, strandedness):
         sys.exit(1)
 
     # Start pipelines
-    # Start rnaseq
-    rnaseq_command = []
-    nextflow_config = config.get("nextflow", "custom_config")
-
-
-    #Start rnafusion
+    # Build the rnaseq command
+    rnaseq_command = build_rnaseq_command(config, outdir, ss_path)
+    # Build the rnafusion command
+    rnafusion_command = build_rnafusion_command(config, outdir, ss_path)
 
 
 if __name__ == "__main__":

@@ -78,3 +78,64 @@ def sanitize_fastqdir(fastqdir: str):
             raise Exception(
                 f"Found a file not ending with .fastq.gz in fastq dir: {filename}"
             )
+
+
+def build_rnaseq_command(config: str, outdir: str ,ss_path: str) -> list:
+    rnaseq_command = ['nextflow']
+    # Path to main.nf
+    rnaseq_command.append(config.get("nextflow", "rnaseq"))
+
+    # If custom config, use it
+    if config.get("nextflow", "custom_config"):
+        rnaseq_command.append("-c")
+        rnaseq_command.append(config.get("nextflow", "custom_config"))
+
+    # Profile to use
+    rnaseq_command.append("-profile")
+    rnaseq_command.append(config.get("nextflow", "profile"))
+
+    # Genome version to use
+    rnaseq_command.append("--genome")
+    rnaseq_command.append(config.get("nextflow", "genome"))
+
+    # Input samplesheet.csv
+    rnaseq_command.append("--input")
+    rnaseq_command.append(ss_path)
+
+    # Outdir
+    rnaseq_command.append("--outdir")
+    rnaseq_command.append(os.path.join(outdir, "rnaseq"))
+
+    return rnaseq_command
+
+
+def build_rnafusion_command(config: str, outdir: str ,ss_path: str) -> list:
+    rnafusion_command = ['nextflow']
+    # Path to main.nf
+    rnafusion_command.append(config.get("nextflow", "rnafusion"))
+
+    # If custom config, use it
+    if config.get("nextflow", "custom_config"):
+        rnafusion_command.append("-c")
+        rnafusion_command.append(config.get("nextflow", "custom_config"))
+
+    # Profile to use
+    rnafusion_command.append("-profile")
+    rnafusion_command.append(config.get("nextflow", "profile"))
+
+    # Run alla tools
+    rnafusion_command.append("--all")
+
+    # Path to dependencies
+    rnafusion_command.append("--genomes_base")
+    rnafusion_command.append(config.get("nextflow", "dependencies_fusion"))
+
+    # Input samplesheet.csv
+    rnafusion_command.append("--input")
+    rnafusion_command.append(ss_path)
+
+    # Outdir
+    rnafusion_command.append("--outdir")
+    rnafusion_command.append(os.path.join(outdir, "rnafusion"))
+
+    return rnafusion_command
