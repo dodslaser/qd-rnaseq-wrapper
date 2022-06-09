@@ -94,7 +94,7 @@ def build_rnaseq_command(config, outdir: str, ss_path: str, testrun=False) -> li
     :param outdir: Path to output directory
     :param ss_path: Path to samplesheet.csv
     :param: testrun: Set to true to run test data
-    :return: List with all components of the command
+    :return: List of list with all components of the command
     """
     rnaseq_command = ["nextflow"]
     # Path to main.nf
@@ -122,7 +122,7 @@ def build_rnaseq_command(config, outdir: str, ss_path: str, testrun=False) -> li
     rnaseq_command.append(os.path.join(outdir, "rnaseq"))
 
     if testrun:
-        return [[
+        return [
                 "nextflow",
                 config.get("nextflow", "rnaseq"),
                 "-profile",
@@ -131,7 +131,7 @@ def build_rnaseq_command(config, outdir: str, ss_path: str, testrun=False) -> li
                 "/apps/bio/repos/nf-core-configs/conf/medair.config",
                 "--outdir",
                 os.path.join(config.get("nextflow", "test_outdir"), "rnaseq"),
-                ]]
+                ]
     else:
         return rnaseq_command
 
@@ -144,7 +144,7 @@ def build_rnafusion_command(config, outdir: str, ss_path: str, testrun=False) ->
     :param outdir: Path to output directory
     :param ss_path: Path to samplesheet.csv
     :param: testrun: Set to true to run test data
-    :return: List with all components of the command
+    :return: List of list with all components of the command
     """
     rnafusion_command = ["nextflow"]
     # Path to main.nf
@@ -175,7 +175,7 @@ def build_rnafusion_command(config, outdir: str, ss_path: str, testrun=False) ->
     rnafusion_command.append(os.path.join(outdir, "rnafusion"))
 
     if testrun:
-        return [[
+        return [
                 "nextflow",
                 config.get("nextflow", "rnafusion"),
                 "-c",
@@ -186,6 +186,6 @@ def build_rnafusion_command(config, outdir: str, ss_path: str, testrun=False) ->
                 config.get("nextflow", "test_outdir"),
                 "--genomes_base",
                 os.path.join(config.get("nextflow", "dependencies_fusion"), "rnafusion"),
-                ]]
+                ]
     else:
         return rnafusion_command

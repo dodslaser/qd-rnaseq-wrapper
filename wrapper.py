@@ -61,13 +61,13 @@ def main(fastqdir, outdir, strandedness, testrun, skip_rnaseq, skip_rnafusion):
     if not skip_rnaseq:
         logger.info("Starting the nf-core/rnaseq pipeline")
         rnaseq_command = build_rnaseq_command(config, outdir, ss_path, testrun)
-        threads.append(threading.Thread(target=call_script, args=rnaseq_command))
+        threads.append(threading.Thread(target=call_script, args=[rnaseq_command]))
 
     # Build the rnafusion command and add to threads
     if not skip_rnafusion:
         logger.info("Starting the nf-core/rnafusion pipeline")
         rnafusion_command = build_rnafusion_command(config, outdir, ss_path, testrun)
-        threads.append(threading.Thread(target=call_script, args=rnafusion_command))
+        threads.append(threading.Thread(target=call_script, args=[rnafusion_command]))
 
     # Start both pipelines in parallel
     for t in threads:
