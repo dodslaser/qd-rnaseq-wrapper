@@ -79,7 +79,7 @@ def sanitize_fastqdir(fastqdir: str):
     """
     for filename in os.listdir(fastqdir):
         if not filename.endswith(".fastq.gz"):
-            if filename == "samplesheet.csv":
+            if filename.lower() == "samplesheet.csv":
                 continue
             raise Exception(
                 f"Found a file not ending with .fastq.gz in fastq dir: {filename}"
