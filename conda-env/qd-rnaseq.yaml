@@ -3,6 +3,6 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python
-  - nextflow
+  - python=3.10.*
+  - nextflow=22.*
   - click
