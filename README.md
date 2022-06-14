@@ -24,6 +24,26 @@ cd /apps/bio/repos/nf-core/nf-core-rnaseq-X.Y/
 nf-core download rnaseq --container singularity
 ```
 
+**Pre-downloaded references**
+
+Some dependencies, such as genome references can be downloaded on the fly using the 
+--genome flag of the rnaseq pipeline. However, this download sometimes takes quite a bit of time, and can cause
+the pipeline to crash in the case of network dropouts.
+
+In order to circumvent this, the references can be downloaded from AWS iGenomes. For this to work you need to
+use the aws s3 tool-suite. The following code snippet shows how to download the fasta, gtf, bed and STARIndex 
+for GRCh38 from NCBI. To construct other download options, use the website [AWS iGenomes](https://ewels.github.io/AWS-iGenomes/).
+
+To use them, specify paths in the config.ini under '[rnaseq-references]'
+
+```
+module load aws-cli/2.7.7
+aws s3 --no-sign-request --region eu-west-1 sync s3://ngi-igenomes/igenomes/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/ /apps/bio/dependencies/nf-core/igenomes/Homo_sapiens/NCBI/GRCh38/Sequence/WholeGenomeFasta/
+aws s3 --no-sign-request --region eu-west-1 sync s3://ngi-igenomes/igenomes/Homo_sapiens/NCBI/GRCh38/Annotation/Genes/ /apps/bio/dependencies/nf-core/igenomes/Homo_sapiens/NCBI/GRCh38/Annotation/Genes/ --exclude "*" --include "genes.gtf"
+aws s3 --no-sign-request --region eu-west-1 sync s3://ngi-igenomes/igenomes/Homo_sapiens/NCBI/GRCh38/Annotation/Genes/ /apps/bio/dependencies/nf-core/igenomes/Homo_sapiens/NCBI/GRCh38/Annotation/Genes/ --exclude "*" --include "genes.bed"
+aws s3 --no-sign-request --region eu-west-1 sync s3://ngi-igenomes/igenomes/Homo_sapiens/NCBI/GRCh38/Sequence/STARIndex/ /apps/bio/dependencies/nf-core/igenomes/Homo_sapiens/NCBI/GRCh38/Sequence/STARIndex/
+```
+
 ### nf-core/rnafusion
 The pipeline is installed in `/apps/bio/repos/nf-core/nf-core-rnafusion-X.Y.Z/`.
 

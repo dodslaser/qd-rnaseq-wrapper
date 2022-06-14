@@ -23,7 +23,8 @@ from tools.helpers import (
 @click.option("--testrun", is_flag=True, help="Run with nf-core test data")
 @click.option("--skip-rnaseq", is_flag=True, help="Skip the nf-core/rnaseq pipeline")
 @click.option("--skip-rnafusion", is_flag=True, help="Skip the nf-core/rnafusion pipeline")
-def main(fastqdir, outdir, strandedness, testrun, skip_rnaseq, skip_rnafusion):
+@click.option("--save-reference", is_flag=True, help="Save the genome references in outfolder")
+def main(fastqdir, outdir, strandedness, testrun, skip_rnaseq, skip_rnafusion, save_reference):
     # Set up the logger function
     now = datetime.datetime.now()
     logfile = os.path.join(outdir, "QD-rnaseq" + now.strftime("%y%m%d_%H%M%S") + ".log")
@@ -60,7 +61,7 @@ def main(fastqdir, outdir, strandedness, testrun, skip_rnaseq, skip_rnafusion):
     # Build the rnaseq command and add to threads
     if not skip_rnaseq:
         logger.info("Starting the nf-core/rnaseq pipeline")
-        rnaseq_command = build_rnaseq_command(config, outdir, ss_path, testrun)
+        rnaseq_command = build_rnaseq_command(config, outdir, ss_path, testrun, save_reference)
         threads.append(threading.Thread(target=call_script, args=[rnaseq_command]))
 
     # Build the rnafusion command and add to threads
