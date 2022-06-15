@@ -9,6 +9,12 @@ All these are handled by a conda environment which can be activated before runni
 The wrapper use two nf-core pipelines, [nf-core/rnaseq](https://nf-co.re/rnaseq) and [nf-core/rnafusion](https://nf-co.re/rnafusion/2.0.0).
 Both pipelines were downloaded using the [nf-core tools suite](https://nf-co.re/tools/).
 
+**Code for installation**
+```
+nf-core download rnaseq --container singularity --outdir /apps/bio/repos/nf-core/nf-core-rnaseq-X.Y.Z
+nf-core download rnafusion --container singularity --outdir /apps/bio/repos/nf-core/nf-core-rnafusion-X.Y.Z
+```
+
 ### nf-core/rnaseq
 
 The pipeline is installed in `/apps/bio/repos/nf-core/nf-core-rnaseq-X.X/`.
@@ -53,7 +59,7 @@ using the env variable `$NXF_SINGULARITY_CACHEDIR`. This is best to have set in 
 Dependencies in the form of reference data and genome index was built using the --build_references flag. 
 In order to be able to build all dependencies, a [COSMIC](https://cancer.sanger.ac.uk/cosmic/) account is required.
 
-Code for installation
+**Code for installation**
 
 ```
 export NXF_SINGULARITY_CACHEDIR="/apps/bio/dependencies/nf-core/singularities"
