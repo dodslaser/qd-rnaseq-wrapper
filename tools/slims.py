@@ -20,12 +20,9 @@ class SlimsSample:
     """
     Class containing the sample data.
     """
-    def __init__(self, sample_name, run_tag=''):
-        self.sample_name = sample_name
-        self.run_tag = run_tag
-
+    def __init__(self, content_id):
+        self.content_id = content_id
         self._dna = None
-        self._fastq = None
         self._fastqs = []
         self._bioinformatics = None
 
@@ -33,7 +30,7 @@ class SlimsSample:
     def dna(self):
         if not self._dna:
             records = slims.fetch('Content', conjunction()
-                                  .add(equals('cntn_id', self.sample_name))
+                                  .add(equals('cntn_id', self.content_id))
                                   .add(equals('cntn_fk_contentType', 6)))
 
             if len(records) > 1:
@@ -44,71 +41,42 @@ class SlimsSample:
 
         return self._dna
 
-    @property
-    def fastq(self):
-        if not self.run_tag:
-            raise Exception('Can not fetch fastq without a set run tag.')
-
-        if not self._fastq:
-            records = slims.fetch('Content', conjunction()
-                                  .add(equals('cntn_id', self.sample_name))
-                                  .add(equals('cntn_fk_contentType', 22))
-                                  .add(equals('cntn_cstm_runTag', self.run_tag)))
-
-            if len(records) > 1:
-                raise Exception('More than 1 fastq somehow.')
-
-            if records:
-                self._fastq = records[0]
-
-        return self._fastq
 
     @property
     def fastqs(self):
         if not self._fastqs:
             records = slims.fetch('Content', conjunction()
-                                  .add(equals('cntn_id', self.sample_name))
+                                  .add(equals('cntn_id', self.content_id))
                                   .add(equals('cntn_fk_contentType', 22)))
             self._fastqs = records
 
         return self._fastqs
 
+
     @property
     def bioinformatics(self):
-        if not self.run_tag:
-            raise Exception('Can not fetch fastq without a set run tag.')
-
         if not self._bioinformatics:
             records = slims.fetch('Content', conjunction()
-                                  .add(equals('cntn_id', self.sample_name))
-                                  .add(equals('cntn_fk_contentType', 23))
-                                  .add(equals('cntn_cstm_runTag', self.run_tag)))
-
-            if len(records) > 1:
-                raise Exception('More than 1 bioinformatics somehow.')
-
-            if records:
-                self._bioinformatics = records[0]
+                                  .add(equals('cntn_id', self.content_id))
+                                  .add(equals('cntn_fk_contentType', 23)))
+            self._bioinformatics = records
 
         return self._bioinformatics
 
-    def add_bioinformatics(self, fields={}):
-        if self.bioinformatics:
-            raise Exception('Bioinformatics content already exists. Can not add.')
-        if not self.fastq:
+    def add_bioinformatics(self, originalContent, fields={}):
+        if not self.fastqs:
             raise Exception('Can not add bioinformatics without a parent fastq record.')
-        if not self.run_tag:
-            raise Exception('Can not add bioinformatics without a set run tag.')
 
-        fields['cntn_id'] = self.sample_name
+        fields['cntn_id'] = self.content_id
         fields['cntn_fk_contentType'] = 23
-        fields['cntn_cstm_runTag'] = self.run_tag
         fields['cntn_status'] = Status.PENDING.value
         fields['cntn_fk_location'] = 83
-        fields['cntn_fk_originalContent'] = self.fastq.cntn_pk.value
+        fields['cntn_fk_originalContent'] = originalContent
         fields['cntn_fk_user'] = ''
 
         self._bioinformatics = slims.add('Content', fields)
+
+        return self._bioinformatics
 
     def refresh(self):
         self._dna = None
@@ -167,23 +135,22 @@ def translate_slims_info(record) -> dict:
     }
     return master
 
-def samples_from_sec_analysis(primary_key: int) -> dict:
+def slims_records_from_sec_analysis(primary_key: int) -> list:
     """
-    Fetch all records from slims given a secondary analysis tag
+    Fetch all DNA objects from slims given a secondary analysis key
 
     :param primary_key: Primary key integer of secondary analysis
-    :return: Dictionary of sample names and their corresponding slims records
+    :return: List with all DNA objects marked with the secondary analysis key
     """
-
-    records = slims.fetch("Content", equals("cntn_cstm_secondaryAnalysis", primary_key))
-
-    samples = {}
+    return_list = []
+    records = slims.fetch("Content",conjunction()
+                          .add(equals("cntn_cstm_secondaryAnalysis", primary_key))
+                          .add(equals("cntn_fk_contentType", 6)))
 
     for record in records:
-        sample_name = record.column('cntn_id').value
-        samples[sample_name] = record
+        return_list.append(record.cntn_id.value)
 
-    return samples
+    return return_list
 
 
 def find_fastq_paths(fastq_records) -> list:
@@ -196,6 +163,10 @@ def find_fastq_paths(fastq_records) -> list:
     """
     reads_fastq_pairs = []  # NOTE: All reads and fastq_paths tuple pairs
     for fastq_object in fastq_records:
+        # Skip if set as not include
+        if fastq_object.cntn_cstm_doNotInclude.value == True:
+            continue
+
         demuxer_info_json = json.loads(fastq_object.cntn_cstm_demuxerSampleResult.value)
         if not demuxer_info_json:
             raise MissingDemuxerInfoError(f'A fastq object without demuxer info was found: {sample_name}')
@@ -243,3 +214,100 @@ def find_runtag_from_fastqs(fastq_objects) -> str:
         raise Exception('No run tag found in fastq objects')
     else:
         return runtag_newest
+
+
+def find_secanalysis_and_state(bioinformatics_record, sample_name) -> tuple[int, str]:
+    """
+    Takes a slims object with bioinformatics content and returns a tuple containing
+    the secondary analysis ID and secondary analysis state
+
+    :param bioinformatics_records: slims bioinformatics object
+    :param sample_name: Sample name (for logging purposes)
+    :return: Tuple with secondary analysis ID and secondary analysis state
+    """
+    # Note, this is a bit hacky since right now a bioinfo object could have multiple secondary analyses.
+    # This means that cntn_cstm_secondaryAnalysis is a list
+    sec_analysis = bioinformatics_record.cntn_cstm_secondaryAnalysis.value[0]
+    sec_analysis_state = bioinformatics_record.cntn_cstm_SecondaryAnalysisState.value
+    if not sec_analysis:
+        raise Exception(f'A bioinformatics object without secondary analysis info was found: {sample_name}')
+    elif not sec_analysis_state:
+        raise Exception(
+            f'A bioinformatics object without secondary analysis state was found: {sample_name}')
+
+    return sec_analysis, sec_analysis_state
+
+
+def fetch_bioinformatics_record(content_id: str, secondary_analysis: int) -> 'Records':
+    """
+    Fetch a bioinformatics record from slims given a content ID, content type, and secondary analysis ID
+
+    :param content_id: Content ID
+    :param secondary_analysis: Secondary analysis ID
+    :return: SLIMS bioinformatics object
+    """
+    records = slims.fetch("Content", conjunction()
+                          .add(equals("cntn_id", content_id))
+                          .add(equals("cntn_fk_contentType", 23))  # 23 equals bioinformatics
+                          .add(equals("cntn_cstm_secondaryAnalysis", secondary_analysis)))
+
+    if len(records) > 1:
+        raise IOError(f'Multiple bioinformatics objects found for {content_id}')
+    else:
+        return records
+
+
+def fetch_fastq_records(content_id: str,) -> 'Record':
+    """
+    Fetch a bioinformatics record from slims given a content ID
+
+    :param content_id: Content ID
+    :return: SLIMS fastq object
+    """
+    records = slims.fetch("Content", conjunction()
+                          .add(equals("cntn_id", content_id))
+                          .add(equals("cntn_fk_contentType", 22)))  # 22 equals fastq
+
+    return records
+
+
+def find_attached_bioinfo_objects(bioinformatics_records, original_content_pk: int, secondaryAnalysis: int) -> 'Record':
+    """
+    Find all bioinformatics objects attached to a given originalContent and secondaryAnalysis
+
+    :param bioinformatics_records: SLIMS bioinformatics records
+    :param original_content_pk: Original content primary key
+    :param secondaryAnalysis: Secondary analysis key
+    :return: Bioinformatics objects
+    """
+
+    attached_bioinfo_objects = []
+    for bioinfo_obj in bioinformatics_records:
+
+        if (
+                bioinfo_obj.cntn_fk_originalContent.value == original_content_pk
+                and secondaryAnalysis in bioinfo_obj.cntn_cstm_secondaryAnalysis.value
+        ):
+            attached_bioinfo_objects.append(bioinfo_obj)
+
+    if len(attached_bioinfo_objects) > 1:
+        raise Exception(f"Found more than one bioinformatics object attached with secondary analysis {secondaryAnalysis}")
+
+    if len(attached_bioinfo_objects) == 0:
+        return False
+    else:
+        return attached_bioinfo_objects[0]
+
+
+def update_bioinformatics_record(bioinformatics_record, fields={}) -> 'Record':
+    """
+    Update a bioinformatics record in slims given a dictionary of fields to update
+
+    :param bioinformatics_records: SLIMS bioinformatics records
+    :param fields: Dictionary of fields to update
+    :return: SLIMS bioinformatics object
+    """
+
+    updated_record = bioinformatics_record.update(fields)
+
+    return updated_record
