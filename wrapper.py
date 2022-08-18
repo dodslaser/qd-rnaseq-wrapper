@@ -3,6 +3,7 @@ import sys
 import datetime
 import threading
 import rich_click as click
+from collections import defaultdict
 
 from runner import qd_start
 
@@ -10,12 +11,13 @@ from tools.helpers import (
     setup_logger,
     get_config,
     make_samplesheet,
-    read_previous_samples_file)
 from tools.slims import (
     SlimsSample,
-    translate_slims_info,
-    samples_from_sec_analysis,
-    find_runtag_from_fastqs)
+    slims_records_from_sec_analysis,
+    find_runtag_from_fastqs,
+    find_fastq_paths,
+    find_attached_bioinfo_objects,
+    update_bioinformatics_record)
 
 
 def start_runner_threads(sample_dict: dict, logger) -> list:
@@ -78,47 +80,72 @@ def main(logdir: str, cleanup: bool):
         )
     logger = setup_logger("qd-rnaseq", logfile)
 
-    #### --- Read in the file with previously analysed samples --- ###
-    previous_samples = read_previous_samples_file(config)
 
     ### --- Find all slims records marked for QD-RNAseq pipeline as secondary analysis --- ###
-    rnaseq_samples = samples_from_sec_analysis(186)
+    all_rnaseq_samples = slims_records_from_sec_analysis(186)
     # 29 = WOPR
     # 186 = QD-RNA
 
-    # Skip the sample if it has previously been analysed
-    # This also gathers info from SLIMS about the sample
-    # This is a bit cumbersome but done as SLIMS doesn't have the run tag easily queryable right now
-    for sample in rnaseq_samples.keys():
-        # Get the runtag for the sample, combine with sample name
-        try:
-            slimsinfo = SlimsSample(sample)
-            runtag = find_runtag_from_fastqs(slimsinfo.fastqs)
-            sample_id = f"{sample}_{runtag}"
-        except Exception as e:
-            logger.error(e)
-            sys.exit(1)
-            # TODO, this should mark this sample as failed, and send an email. Not break the whole thing
+    # Find all DNA objects marked for QD-RNAseq pipeline as secondary analysis
+    # They also need to either be missing any bioinformatics objects set as QD-rnaseq,
+    # or have a bioinformatics object set as QD-rnaseq with the secAnalysisState set to 'novel'
+    rnaseq_samples = defaultdict(dict)
+    for sample in all_rnaseq_samples:
+        # Create the slimssample object
+        slimsinfo = SlimsSample(sample)
+        if not slimsinfo.fastqs:  # If no fastqs, skip
+            continue
 
-        if sample_id in previous_samples:
-            del rnaseq_samples[sample]
+        for fastq in slimsinfo.fastqs:
+            # Skip fastq objects set to not include or no bioinformatics
+            if fastq.cntn_cstm_doNotInclude.value == True:
+                continue
+            elif fastq.cntn_cstm_noBioinformaticsObjects.value == True:
+                continue
 
-    # Check if any samples remains, if so start the pipeline
+            # Find all bioinformatics objects for this fastq object with correct secondary analysis
+            #rnaseq_samples[sample] = {}
+            try:
+                attached_bioinfo_object = find_attached_bioinfo_objects(slimsinfo.bioinformatics, fastq.pk(), 186)
+            except Exception as e:
+                logger.error(e)
+
+            # Take care of case where there is no bioinformatics object
+            if attached_bioinfo_object == False:
+                # Create a bionformatics object and set it to "running"
+                bioinfo_fields = {
+                    'cntn_cstm_secondaryAnalysis': [186],
+                    'cntn_cstm_SecondaryAnalysisState': 'running',
+                }
+                # Create a bioinformatics object and save it
+                new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)
+                rnaseq_samples[sample]['bioinformatics'] = new_bioinfo_record
+
+            # Set existing bioinfo record to 'running' and keep track of it
+            elif attached_bioinfo_object.cntn_cstm_SecondaryAnalysisState.value == 'novel':
+                new_bioinfo_record = update_bioinformatics_record(attached_bioinfo_object, fields={'cntn_cstm_SecondaryAnalysisState': 'running'})
+                rnaseq_samples[sample]['bioinformatics'] = new_bioinfo_record
+
+            else:  # State != novel
+                continue
+
+            # Save all the relevant fastq paths for this sample
+            if len(rnaseq_samples[sample]) > 0:
+                all_fastq_paths = find_fastq_paths(slimsinfo.fastqs)
+                rnaseq_samples[sample]['fastq'] = all_fastq_paths
+
     if len(rnaseq_samples) > 0:
-        logger.info(f"Found {len(rnaseq_samples)} sample(s) marked for QD-RNAseq pipeline. Starting the wrapper.")
+        logger.info(f"Found {len(selected_rnaseq_samples.keys())} sample(s) marked for QD-RNAseq pipeline. Starting the wrapper.")
     else:
         sys.exit(0)
 
     ### --- Loop over each record --- ###
     runner_samples = {} # Store all samplesheet paths per sample in a dict for later use
-    for sample, record in rnaseq_samples.items():
+    for sample in rnaseq_samples:
         ### --- Collect information about the sample --- ###
         # Create a new SlimsSample object
         logger.info(f"{sample} - Extracting SLIMS information.")
         slimsinfo = SlimsSample(sample)
-
-        # Translate the information from the SLIMS database into a dictionary
-        info = translate_slims_info(record)
 
         # Get the run tag and combine with name
         runtag = find_runtag_from_fastqs(slimsinfo.fastqs)
