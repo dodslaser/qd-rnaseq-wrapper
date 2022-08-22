@@ -7,10 +7,12 @@ from tools.helpers import (
     get_config,
     dir_to_samplesheet,
     verify_fastqdir,
+    report_results,
+)
+from tools.processing import (
     build_rnaseq_command,
     build_rnafusion_command,
     start_pipe_threads,
-    report_results,
 )
 
 @click.group()

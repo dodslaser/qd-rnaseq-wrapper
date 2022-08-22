@@ -1,7 +1,6 @@
 import os
 import sys
 import datetime
-import threading
 import rich_click as click
 from collections import defaultdict
 
