@@ -24,7 +24,7 @@ class SlimsSample:
         self.content_id = content_id
         self._dna = None
         self._fastqs = []
-        self._bioinformatics = None
+        self._bioinformatics = []
 
     @property
     def dna(self):
@@ -74,7 +74,7 @@ class SlimsSample:
         fields['cntn_fk_originalContent'] = originalContent
         fields['cntn_fk_user'] = ''
 
-        self._bioinformatics = slims.add('Content', fields)
+        self._bioinformatics.append(slims.add('Content', fields))
 
         return self._bioinformatics
 
@@ -291,7 +291,7 @@ def find_attached_bioinfo_objects(bioinformatics_records, original_content_pk: i
             attached_bioinfo_objects.append(bioinfo_obj)
 
     if len(attached_bioinfo_objects) > 1:
-        raise Exception(f"Found more than one bioinformatics object attached with secondary analysis {secondaryAnalysis}")
+        raise Exception(f"Content {original_content_pk} has more than one bioinformatics object attached with secondary analysis {secondaryAnalysis}")
 
     if len(attached_bioinfo_objects) == 0:
         return False
