@@ -417,19 +417,17 @@ def report_results(finished_pipes: list, outdir: str, sample_name: str, config) 
 
     return copied_files
 
-def make_samplesheet(sample, fastqs, strandedness: str, outdir: str) -> str:
+def make_samplesheet(sample, fastqs: list, strandedness: str, outdir: str) -> str:
     """
     Takes a list of fastq files and a strandedness and creates a samplesheet.csv
     file with the correct information.
 
     :param sample: Name of the sample
-    :param fastqs: Object with fastq file paths
+    :param fastqs: List with fastq file paths
     :param strandedness: Strandedness of the library
     :param outfile: Path to the output file
     :return: Path to the samplesheet.csv file
     """
-    # Get all fastq paths
-    fastqs = find_fastq_paths(fastqs)
 
     # Path to samplesheet.csv
     ss_path = os.path.join(outdir, "samplesheet.csv")
