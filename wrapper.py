@@ -10,11 +10,10 @@ from runner import qd_start
 from tools.helpers import (
     setup_logger,
     get_config,
-    make_samplesheet,
+    make_samplesheet)
 from tools.slims import (
     SlimsSample,
     slims_records_from_sec_analysis,
-    find_runtag_from_fastqs,
     find_fastq_paths,
     find_attached_bioinfo_objects,
     update_bioinformatics_record)
@@ -103,8 +102,11 @@ def main(logdir: str, cleanup: bool):
             elif fastq.cntn_cstm_noBioinformaticsObjects.value == True:
                 continue
 
+            # Get the runtag from the fastq object
+            runtag = fastq.cntn_cstm_runTag.value
+            sample_uniqID = "_".join([sample, runtag])
+
             # Find all bioinformatics objects for this fastq object with correct secondary analysis
-            #rnaseq_samples[sample] = {}
             try:
                 attached_bioinfo_object = find_attached_bioinfo_objects(slimsinfo.bioinformatics, fastq.pk(), 186)
             except Exception as e:
@@ -116,61 +118,63 @@ def main(logdir: str, cleanup: bool):
                 bioinfo_fields = {
                     'cntn_cstm_secondaryAnalysis': [186],
                     'cntn_cstm_SecondaryAnalysisState': 'running',
+                    'cntn_cstm_runTag': runtag,
                 }
                 # Create a bioinformatics object and save it
-                new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)
-                rnaseq_samples[sample]['bioinformatics'] = new_bioinfo_record
+                new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)[-1]  # Not sure if this is the right way to do this
+                rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
+                rnaseq_samples[sample_uniqID]['state'] = 'running'
 
             # Set existing bioinfo record to 'running' and keep track of it
             elif attached_bioinfo_object.cntn_cstm_SecondaryAnalysisState.value == 'novel':
                 new_bioinfo_record = update_bioinformatics_record(attached_bioinfo_object, fields={'cntn_cstm_SecondaryAnalysisState': 'running'})
-                rnaseq_samples[sample]['bioinformatics'] = new_bioinfo_record
+                rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
+                rnaseq_samples[sample_uniqID]['state'] = 'running'
 
             else:  # State != novel
                 continue
 
             # Save all the relevant fastq paths for this sample
-            if len(rnaseq_samples[sample]) > 0:
+            if len(rnaseq_samples[sample_uniqID]) > 0:
                 all_fastq_paths = find_fastq_paths(slimsinfo.fastqs)
-                rnaseq_samples[sample]['fastq'] = all_fastq_paths
+                rnaseq_samples[sample_uniqID]['fastq'] = all_fastq_paths
 
     if len(rnaseq_samples) > 0:
-        logger.info(f"Found {len(selected_rnaseq_samples.keys())} sample(s) marked for QD-RNAseq pipeline. Starting the wrapper.")
+        logger.info(f"Found {len(rnaseq_samples.keys())} sample(s) marked for QD-RNAseq pipeline. Starting the wrapper.")
     else:
         sys.exit(0)
 
-    ### --- Loop over each record --- ###
-    runner_samples = {} # Store all samplesheet paths per sample in a dict for later use
+
+    ### --- Loop over each record, gather information needed --- ###
     for sample in rnaseq_samples:
         ### --- Collect information about the sample --- ###
-        # Create a new SlimsSample object
         logger.info(f"{sample} - Extracting SLIMS information.")
-        slimsinfo = SlimsSample(sample)
-
-        # Get the run tag and combine with name
-        runtag = find_runtag_from_fastqs(slimsinfo.fastqs)
-        sample_id = f"{sample}_{runtag}"
+        fastq_paths = rnaseq_samples[sample]['fastq']
 
         ### --- Generate a samplesheet from the information gathered --- ###
-        outdir = os.path.join(config.get("general", "output_dir"), sample_id)
-        logger.info(f"{sample} - Generating samplesheet.csv in {outdir}.")
+        outdir = os.path.join(config.get("general", "output_dir"), sample)
+        logger.info(f"{sample} - Generating samplesheet.csv in {outdir}")
         os.makedirs(outdir, exist_ok=True)
 
         strandedness = config.get("general", "strandedness")
 
-        sample_ss_path = make_samplesheet(sample_id, slimsinfo.fastqs, strandedness, outdir)
-        runner_samples[sample_id] = sample_ss_path
+        sample_ss_path = make_samplesheet(sample, fastq_paths, strandedness, outdir)
+        rnaseq_samples[sample]['samplesheet'] = sample_ss_path
 
-    ### --- Start a runner for each sample --- ###
-    completed_samples = start_runner_threads(runner_samples, logger)
 
-    ### --- Add analysed samples to previously analysed samples file --- ###
-    for sample in completed_samples:
-        with open(config.get("general", "previously_analysed"), "a") as f:
-            f.write(sample + "\n")
+    # ### --- Start a runner for each sample --- ###
+    # completed_samples = start_runner_threads(runner_samples, logger)
+
+
+    ### --- Set states based on success --- ###
+    #TODO
+    #TEMP, set all samples to 'novel'
+    for sample in rnaseq_samples:
+        update_bioinformatics_record(rnaseq_samples[sample]['bioinformatics'], fields={'cntn_cstm_SecondaryAnalysisState': 'novel'})
+
 
     ### --- Completed wrapper --- ###
-    logger.info(f"Completed the QD-RNAseq wrapper for {len(completed_samples)} sample(s).")
+    logger.info(f"Completed the QD-RNAseq wrapper for {len(rnaseq_samples)} sample(s).")
 
 if __name__ == "__main__":
     main()
