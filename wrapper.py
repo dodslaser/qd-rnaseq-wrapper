@@ -3,6 +3,8 @@ import sys
 import datetime
 import rich_click as click
 from collections import defaultdict
+from multiprocessing import Process
+
 
 from runner import qd_start
 
@@ -18,6 +20,7 @@ from tools.slims import (
     update_bioinformatics_record)
 
 
+
 def start_runner_threads(sample_dict: dict, logger) -> list:
     """
     Takes a dict containing sample names and samlesheet paths and starts an instance
@@ -27,12 +30,13 @@ def start_runner_threads(sample_dict: dict, logger) -> list:
     :param logger: Logger object to write logs to
     :return: List of finished samples
     """
-    threads = []
-    for sample_id, ss_path in sample_dict.items():
+    processes = []
+    for sample_id  in sample_dict.keys():
+        ss_path = sample_dict[sample_id]['samplesheet']
         qd_start_kwargs = {'sample_name': sample_id, 'ss_path': ss_path, 'logger': logger}
 
-        threads.append(
-            threading.Thread(
+        processes.append(
+            Process(
                 target=qd_start,
                 kwargs=qd_start_kwargs,
                 name=sample_id,
@@ -41,12 +45,12 @@ def start_runner_threads(sample_dict: dict, logger) -> list:
 
     # Start all samples in parallel
     finished_samples = []
-    for t in threads:
-        logger.info(f"{t.name.split('_')[0]} - Starting the runner")
+    for t in processes:
+        logger.info(f"{t.name} - Starting the runner")
         t.start()
-    for u in threads:  # Waits for all threads to finish
+    for u in processes:  # Waits for all threads to finish
         u.join()
-        logger.info(f"{u.name.split('_')[0]} - Completed the runner")
+        logger.info(f"{u.name} - Completed the runner")
         finished_samples.append(u.name)
 
     return finished_samples
@@ -162,7 +166,7 @@ def main(logdir: str, cleanup: bool):
 
 
     # ### --- Start a runner for each sample --- ###
-    # completed_samples = start_runner_threads(runner_samples, logger)
+    completed_samples = start_runner_threads(rnaseq_samples, logger)
 
 
     ### --- Set states based on success --- ###
