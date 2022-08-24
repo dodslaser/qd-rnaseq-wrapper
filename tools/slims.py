@@ -135,22 +135,22 @@ def translate_slims_info(record) -> dict:
     }
     return master
 
-def slims_records_from_sec_analysis(primary_key: int) -> list:
-    """
-    Fetch all DNA objects from slims given a secondary analysis key
 
-    :param primary_key: Primary key integer of secondary analysis
-    :return: List with all DNA objects marked with the secondary analysis key
+def slims_records_from_sec_analysis(primary_key: int, content_type: int = 6) -> list:
     """
-    return_list = []
+    Fetch all objects from slims given a secondary analysis key and content type
+
+    :param slims: A slims connection object
+    :param primary_key: Primary key integer of secondary analysis
+    :param content_type Key of content type, default is 6 (DNA)
+    :return: List with all records marked with the secondary analysis key
+    """
+
     records = slims.fetch("Content",conjunction()
                           .add(equals("cntn_cstm_secondaryAnalysis", primary_key))
-                          .add(equals("cntn_fk_contentType", 6)))
+                          .add(equals("cntn_fk_contentType", content_type)))
 
-    for record in records:
-        return_list.append(record.cntn_id.value)
-
-    return return_list
+    return records
 
 
 def find_fastq_paths(fastq_records) -> list:

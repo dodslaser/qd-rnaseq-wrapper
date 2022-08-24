@@ -81,7 +81,8 @@ def main(logdir: str, cleanup: bool):
 
 
     ### --- Find all slims records marked for QD-RNAseq pipeline as secondary analysis --- ###
-    all_rnaseq_samples = slims_records_from_sec_analysis(186)
+    all_rnaseq_records = slims_records_from_sec_analysis(186)
+    all_rnaseq_samples = [record.cntn_id.value for record in all_rnaseq_records]
     # 29 = WOPR
     # 186 = QD-RNA
 
