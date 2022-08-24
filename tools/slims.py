@@ -259,7 +259,7 @@ def fetch_bioinformatics_record(content_id: str, secondary_analysis: int) -> 'Re
 
 def fetch_fastq_records(content_id: str,) -> 'Record':
     """
-    Fetch a bioinformatics record from slims given a content ID
+    Fetch fastq records from slims given a content ID
 
     :param content_id: Content ID
     :return: SLIMS fastq object
