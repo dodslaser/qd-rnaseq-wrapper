@@ -136,9 +136,8 @@ def main(logdir: str, cleanup: bool):
                 continue
 
             # Save all the relevant fastq paths for this sample
-            if len(rnaseq_samples[sample_uniqID]) > 0:
-                all_fastq_paths = find_fastq_paths(slimsinfo.fastqs)
-                rnaseq_samples[sample_uniqID]['fastq'] = all_fastq_paths
+            all_fastq_paths = find_fastq_paths(slimsinfo.fastqs)
+            rnaseq_samples[sample_uniqID]['fastq'] = all_fastq_paths
 
     if len(rnaseq_samples) > 0:
         logger.info(f"Found {len(rnaseq_samples.keys())} sample(s) marked for QD-RNAseq pipeline. Starting the wrapper.")
