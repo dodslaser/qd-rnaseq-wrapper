@@ -63,7 +63,7 @@ class SlimsSample:
 
         return self._bioinformatics
 
-    def add_bioinformatics(self, originalContent, fields={}):
+    def add_bioinformatics(self, original_content_pk, fields={}):
         if not self.fastqs:
             raise Exception('Can not add bioinformatics without a parent fastq record.')
 
@@ -71,7 +71,7 @@ class SlimsSample:
         fields['cntn_fk_contentType'] = 23
         fields['cntn_status'] = Status.PENDING.value
         fields['cntn_fk_location'] = 83
-        fields['cntn_fk_originalContent'] = originalContent
+        fields['cntn_fk_originalContent'] = original_content_pk
         fields['cntn_fk_user'] = ''
 
         self._bioinformatics.append(slims.add('Content', fields))
@@ -271,7 +271,7 @@ def fetch_fastq_records(content_id: str,) -> 'Record':
     return records
 
 
-def find_attached_bioinfo_objects(bioinformatics_records, original_content_pk: int, secondaryAnalysis: int) -> 'Record':
+def find_derived_bioinfo_objects(bioinformatics_records, original_content_pk: int, secondaryAnalysis: int) -> 'Record':
     """
     Find all bioinformatics objects attached to a given originalContent and secondaryAnalysis
 

@@ -15,7 +15,7 @@ from tools.slims import (
     SlimsSample,
     slims_records_from_sec_analysis,
     find_fastq_paths,
-    find_attached_bioinfo_objects,
+    find_derived_bioinfo_objects,
     update_bioinformatics_record)
 
 
@@ -108,12 +108,12 @@ def main(logdir: str, cleanup: bool):
 
             # Find all bioinformatics objects for this fastq object with correct secondary analysis
             try:
-                attached_bioinfo_object = find_attached_bioinfo_objects(slimsinfo.bioinformatics, fastq.pk(), 186)
+                derived_bioinfo_object = find_derived_bioinfo_objects(slimsinfo.bioinformatics, fastq.pk(), 186)
             except Exception as e:
                 logger.error(e)
 
             # Take care of case where there is no bioinformatics object
-            if attached_bioinfo_object == False:
+            if derived_bioinfo_object == False:
                 # Create a bionformatics object and set it to "running"
                 bioinfo_fields = {
                     'cntn_cstm_secondaryAnalysis': [186],
@@ -126,8 +126,8 @@ def main(logdir: str, cleanup: bool):
                 rnaseq_samples[sample_uniqID]['state'] = 'running'
 
             # Set existing bioinfo record to 'running' and keep track of it
-            elif attached_bioinfo_object.cntn_cstm_SecondaryAnalysisState.value == 'novel':
-                new_bioinfo_record = update_bioinformatics_record(attached_bioinfo_object, fields={'cntn_cstm_SecondaryAnalysisState': 'running'})
+            elif derived_bioinfo_object.cntn_cstm_SecondaryAnalysisState.value == 'novel':
+                new_bioinfo_record = update_bioinformatics_record(derived_bioinfo_object, fields={'cntn_cstm_SecondaryAnalysisState': 'running'})
                 rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
                 rnaseq_samples[sample_uniqID]['state'] = 'running'
 
