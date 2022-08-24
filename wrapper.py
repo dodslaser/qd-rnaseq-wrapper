@@ -126,13 +126,11 @@ def main(logdir: str, cleanup: bool):
                 # Create a bioinformatics object and save it
                 new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)
                 rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
-                rnaseq_samples[sample_uniqID]['state'] = 'running'
 
             # Set existing bioinfo record to 'running' and keep track of it
             elif derived_bioinfo_object.cntn_cstm_SecondaryAnalysisState.value == 'novel':
                 new_bioinfo_record = update_bioinformatics_record(derived_bioinfo_object, fields={'cntn_cstm_SecondaryAnalysisState': 'running'})
                 rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
-                rnaseq_samples[sample_uniqID]['state'] = 'running'
 
             else:  # State != novel
                 continue
