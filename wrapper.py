@@ -124,7 +124,7 @@ def main(logdir: str, cleanup: bool):
                     'cntn_cstm_runTag': runtag,
                 }
                 # Create a bioinformatics object and save it
-                new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)[-1]  # Not sure if this is the right way to do this
+                new_bioinfo_record = slimsinfo.add_bioinformatics(fastq.pk(), fields=bioinfo_fields)
                 rnaseq_samples[sample_uniqID]['bioinformatics'] = new_bioinfo_record
                 rnaseq_samples[sample_uniqID]['state'] = 'running'
 

@@ -74,9 +74,10 @@ class SlimsSample:
         fields['cntn_fk_originalContent'] = original_content_pk
         fields['cntn_fk_user'] = ''
 
-        self._bioinformatics.append(slims.add('Content', fields))
+        new_record = slims.add('Content', fields)
+        self._bioinformatics.append(new_record)
 
-        return self._bioinformatics
+        return new_record
 
     def refresh(self):
         self._dna = None
