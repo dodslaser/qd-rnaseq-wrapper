@@ -112,6 +112,8 @@ def main(logdir: str, cleanup: bool):
                 derived_bioinfo_object = find_derived_bioinfo_objects(slimsinfo.bioinformatics, fastq.pk(), 186)
             except Exception as e:
                 logger.error(e)
+                continue
+                # TODO, this should mark sample as error and write the exception to slims notify
 
             # Take care of case where there is no bioinformatics object
             if derived_bioinfo_object == False:
