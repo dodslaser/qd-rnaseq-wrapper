@@ -417,7 +417,7 @@ def report_results(finished_pipes: list, outdir: str, sample_name: str, config) 
 
     return copied_files
 
-def make_samplesheet(sample, fastqs: list, strandedness: str, outdir: str) -> str:
+def make_samplesheet(sample: str, fastqs: list, strandedness: str, outdir: str) -> str:
     """
     Takes a list of fastq files and a strandedness and creates a samplesheet.csv
     file with the correct information.
