@@ -1,10 +1,10 @@
 import os
 import sys
+import time
 import datetime
 import rich_click as click
 from collections import defaultdict
 from multiprocessing import Process
-
 
 from runner import qd_start
 
@@ -21,18 +21,23 @@ from tools.slims import (
 
 
 
-def start_runner_threads(sample_dict: dict, logger) -> list:
+def start_runner_processes(sample_dict: dict, max_processes: int, time_offset, logger) -> list:
     """
-    Takes a dict containing sample names and samlesheet paths and starts an instance
-    of the runner in a separate threads.
+    Takes a dict containing sample names, samlesheet paths and SLIMS bioinformatics object and
+    starts an instance of the runner in a separate processes.
+    Will limit the number of simultaneous process based on set value
 
+    :param bioinfo_object: A SLIMS bioinformatics record
     :param sample_dict: Dict of samples with their samplesheet paths
+    :param max_processes: Max number of simultaneous processes to start
+    :time_offset: Length of time in seconds between start of each process
     :param logger: Logger object to write logs to
     :return: List of finished samples
     """
     processes = []
     for sample_id  in sample_dict.keys():
         ss_path = sample_dict[sample_id]['samplesheet']
+        bioinfo_object = sample_dict[sample_id]['bioinformatics']
         qd_start_kwargs = {'sample_name': sample_id, 'ss_path': ss_path, 'logger': logger}
 
         processes.append(
@@ -45,13 +50,19 @@ def start_runner_threads(sample_dict: dict, logger) -> list:
 
     # Start all samples in parallel
     finished_samples = []
-    for t in processes:
-        logger.info(f"{t.name} - Starting the runner")
-        t.start()
-    for u in processes:  # Waits for all threads to finish
-        u.join()
-        logger.info(f"{u.name} - Completed the runner")
-        finished_samples.append(u.name)
+
+    while len(threads) > 0:  # NOTE, this whole block I don't know if its the best solution
+        processes_subset = processes[:max_processes]
+        del processes[:max_processes]
+
+        for t in processes_subset:
+            logger.info(f"{t.name} - Starting the runner")
+            t.start()
+            time.sleep(time_offset)  # Wait before starting next process
+        for u in processes:  # Waits for all threads to finish
+            u.join()
+            logger.info(f"{u.name} - Completed the runner")
+            finished_samples.append(u.name)
 
     return finished_samples
 
@@ -166,14 +177,9 @@ def main(logdir: str, cleanup: bool):
 
 
     # ### --- Start a runner for each sample --- ###
-    completed_samples = start_runner_threads(rnaseq_samples, logger)
-
-
-    ### --- Set states based on success --- ###
-    #TODO
-    #TEMP, set all samples to 'novel'
-    for sample in rnaseq_samples:
-        update_bioinformatics_record(rnaseq_samples[sample]['bioinformatics'], fields={'cntn_cstm_SecondaryAnalysisState': 'novel'})
+    max_processes = config.get("general", "max_processes")
+    time_offset = config.get("general", "time_offset")
+    completed_samples = start_runner_threads(rnaseq_samples, max_processes, time_offset, logger)
 
 
     ### --- Completed wrapper --- ###
