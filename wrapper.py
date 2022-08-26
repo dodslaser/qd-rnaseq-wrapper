@@ -172,6 +172,7 @@ def main(logdir: str, cleanup: bool):
 
         strandedness = config.get("general", "strandedness")
 
+        # TODO, this could be moved over to the runner, having it dealing with all samples based activities
         sample_ss_path = make_samplesheet(sample, fastq_paths, strandedness, outdir)
         rnaseq_samples[sample]['samplesheet'] = sample_ss_path
 
