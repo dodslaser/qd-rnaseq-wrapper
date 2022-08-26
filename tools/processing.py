@@ -2,7 +2,6 @@ import os
 import sys
 from multiprocessing import Process
 import subprocess
-import threading
 
 def build_rnaseq_command(
     config,
@@ -225,10 +224,10 @@ def start_pipe_threads(sample_name:str, pipe_dict: dict, logger) -> list:
         subprocess.call(args)
 
     # Create the threading object
-    threads = []
+    processes = []
     for pipe, command in pipe_dict.items():
         threads.append(
-            threading.Thread(
+            Process(
                 target=call_script,
                 args=[command],
                 name=pipe,
@@ -237,12 +236,12 @@ def start_pipe_threads(sample_name:str, pipe_dict: dict, logger) -> list:
 
     # Start both pipelines in parallel
     finished_pipes = []
-    for t in threads:
-        logger.info(f"{sample_name} - Starting the {t.name} pipeline")
-        t.start()
-    for u in threads:  # Waits for all threads to finish
-        u.join()
-        logger.info(f"{sample_name} - Completed the {u.name} pipeline")
-        finished_pipes.append(u.name)
+    for p in processes:
+        logger.info(f"{sample_name} - Starting the {p.name} pipeline")
+        p.start()
+    for p in processes:  # Waits for all threads to finish
+        p.join()
+        logger.info(f"{sample_name} - Completed the {p.name} pipeline")
+        finished_pipes.append(p.name)
 
     return finished_pipes
