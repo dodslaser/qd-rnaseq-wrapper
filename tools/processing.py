@@ -30,6 +30,10 @@ def build_rnaseq_command(
     rnaseq_command.append("run")
     rnaseq_command.append(config.get("rnaseq", "main"))
 
+    # Place of work
+    rnaseq_command.append("-work-dir")
+    rnaseq_command.append(os.path.join(outdir, "work"))
+
     # Execution report
     rnaseq_command.append("-with-report")
     rnaseq_command.append(
@@ -150,6 +154,10 @@ def build_rnafusion_command(
     rnafusion_command.append("run")
     rnafusion_command.append(config.get("rnafusion", "main"))
 
+    # Place of work
+    rnafusion_command.append("-work-dir")
+    rnafusion_command.append(os.path.join(outdir, "work"))
+
     # Execution report
     rnafusion_command.append("-with-report")
     rnafusion_command.append(os.path.join(outdir, "logs", "rnafusion-execution.html"))
@@ -185,6 +193,15 @@ def build_rnafusion_command(
     # Path to dependencies
     rnafusion_command.append("--genomes_base")
     rnafusion_command.append(config.get("rnafusion", "dependencies_fusion"))
+
+    # FIXME: Has this been fixed in upstream?
+    # Fix references for arriba
+    rnafusion_command.append("--arriba_ref")
+    rnafusion_command.append(config.get("rnafusion", "dependencies_arriba_ref"))
+    rnafusion_command.append("--arriba_ref_blacklist")
+    rnafusion_command.append(config.get("rnafusion", "dependencies_arriba_ref_blacklist"))
+    rnafusion_command.append("--arriba_ref_protein_domain")
+    rnafusion_command.append(config.get("rnafusion", "dependencies_arriba_ref_protein_domain"))
 
     # Use filtered fusionreport fusions for fusioninspector
     rnafusion_command.append("--fusioninspector_filter")
