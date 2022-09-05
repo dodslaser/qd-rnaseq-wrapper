@@ -7,5 +7,6 @@ dependencies:
   - nextflow=22.*
   - rich-click
   - nf-core
+  - pip
   - pip:
-      slims-python-api==6.3.2
+      - slims-python-api==6.3.2
