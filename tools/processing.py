@@ -209,7 +209,7 @@ def build_rnafusion_command(
     return {"nf-core/rnafusion": rnafusion_command}
 
 
-def start_pipe_threads(sample_name:str, pipe_dict: dict, logger) -> list:
+def start_pipe_processes(sample_name:str, pipe_dict: dict, logger) -> list:
     """
     Takes a dict where keys are pipeline names and values are a
     list containing all parts of a command, and starts them in a
@@ -226,7 +226,7 @@ def start_pipe_threads(sample_name:str, pipe_dict: dict, logger) -> list:
     # Create the threading object
     processes = []
     for pipe, command in pipe_dict.items():
-        threads.append(
+        processes.append(
             Process(
                 target=call_script,
                 args=[command],

@@ -12,7 +12,7 @@ from tools.helpers import (
 from tools.processing import (
     build_rnaseq_command,
     build_rnafusion_command,
-    start_pipe_threads,
+    start_pipe_processes,
 )
 from tools.slims import (
     update_bioinformatics_record,
@@ -97,7 +97,6 @@ def qd_start(
     outdir: str = None,
     sample_name: str = None,
     ss_path: str = None,
-    bioinformatics_object: 'Record' = None,
     strandedness: str = None,
     testrun: bool = False,
     skip_rnaseq: bool = False,
@@ -155,7 +154,7 @@ def qd_start(
     # Empty list for storing which pipes to start
     pipe_commands = {}
 
-    # Build the rnaseq command and add to threads
+    # Build the rnaseq command and add to processes
     if not skip_rnaseq:
         rnaseq_command = build_rnaseq_command(
             config,
@@ -179,7 +178,7 @@ def qd_start(
         pipe_commands = pipe_commands | rnafusion_command
 
     # Start the pipelines in separate threads
-    finished_pipes = start_pipe_threads(sample_name, pipe_commands, logger)
+    finished_pipes = start_pipe_processes(sample_name, pipe_commands, logger)
 
     # Move selected files to report dir
     if skip_report:

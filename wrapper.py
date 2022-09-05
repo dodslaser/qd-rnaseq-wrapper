@@ -4,7 +4,7 @@ import time
 import datetime
 import rich_click as click
 from collections import defaultdict
-from multiprocessing import Process
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from runner import qd_start
 
@@ -27,44 +27,50 @@ def start_runner_processes(sample_dict: dict, max_processes: int, time_offset, l
     starts an instance of the runner in a separate processes.
     Will limit the number of simultaneous process based on set value
 
-    :param bioinfo_object: A SLIMS bioinformatics record
     :param sample_dict: Dict of samples with their samplesheet paths
     :param max_processes: Max number of simultaneous processes to start
     :time_offset: Length of time in seconds between start of each process
     :param logger: Logger object to write logs to
     :return: List of finished samples
     """
-    processes = []
-    for sample_id  in sample_dict.keys():
-        ss_path = sample_dict[sample_id]['samplesheet']
-        bioinfo_object = sample_dict[sample_id]['bioinformatics']
-        qd_start_kwargs = {'sample_name': sample_id, 'ss_path': ss_path, 'logger': logger}
+    with ProcessPoolExecutor(max_workers=max_processes) as executor:
+        
+        futures = {}
+        for id, sample in sample_dict.items():
+            futures[
+                executor.submit(
+                    qd_start, 
+                    sample_name = id,
+                    ss_path = sample["samplesheet"],
+                    logger = logger,
+                )
+            ] = id
+            logger.info(f"{id} - Starting runner")
+            time.sleep(time_offset)
 
-        processes.append(
-            Process(
-                target=qd_start,
-                kwargs=qd_start_kwargs,
-                name=sample_id,
-            )
-        )
+        completed, failed = [], []
+        # FIXME: A lot of this logic should be performed in the runner itself
+        for f in as_completed(futures.keys()):
+            id = futures[f]
+            bioinformatics = sample_dict[id]["bioinformatics"]
+            try:
+                f.result()
+            except Exception:
+                logger.info(f"{id} - Runner failed")
+                sample_dict[id]["bioinformatics"] = update_bioinformatics_record(
+                    bioinformatics_record=bioinformatics,
+                    fields={'cntn_cstm_SecondaryAnalysisState': 'failed'}
+                )
+                failed.append(id)
+            else:
+                logger.info(f"{id} - Runner finished")
+                sample_dict[id]["bioinformatics"] = update_bioinformatics_record(
+                    bioinformatics_record=bioinformatics,
+                    fields={'cntn_cstm_SecondaryAnalysisState': 'complete'}
+                )
+                completed.append(id)
 
-    # Start all samples in parallel
-    finished_samples = []
-
-    while len(threads) > 0:  # NOTE, this whole block I don't know if its the best solution
-        processes_subset = processes[:max_processes]
-        del processes[:max_processes]
-
-        for t in processes_subset:
-            logger.info(f"{t.name} - Starting the runner")
-            t.start()
-            time.sleep(time_offset)  # Wait before starting next process
-        for u in processes:  # Waits for all threads to finish
-            u.join()
-            logger.info(f"{u.name} - Completed the runner")
-            finished_samples.append(u.name)
-
-    return finished_samples
+    return completed, failed
 
 @click.command()
 @click.option(
@@ -90,7 +96,7 @@ def main(logdir: str, cleanup: bool):
     logfile = os.path.join(
         logdir,
         "QD-rnaseq-wrapper_" + now.strftime("%y%m%d_%H%M%S") + ".log",
-        )
+    )
     logger = setup_logger("qd-rnaseq", logfile)
 
 
@@ -178,13 +184,16 @@ def main(logdir: str, cleanup: bool):
 
 
     # ### --- Start a runner for each sample --- ###
-    max_processes = config.get("general", "max_processes")
-    time_offset = config.get("general", "time_offset")
-    completed_samples = start_runner_threads(rnaseq_samples, max_processes, time_offset, logger)
+    max_processes = int(config.get("general", "max_processes"))
+    time_offset = int(config.get("general", "time_offset"))
+    completed, failed = start_runner_processes(rnaseq_samples, max_processes, time_offset, logger)
 
 
     ### --- Completed wrapper --- ###
-    logger.info(f"Completed the QD-RNAseq wrapper for {len(rnaseq_samples)} sample(s).")
+    logger.info(f"Completed the QD-RNAseq wrapper for {len(completed)} sample(s).")
+    if len(failed) > 0:
+        logger.warn(f"Analysis failed for {len(failed)} sample(s).")
+
 
 if __name__ == "__main__":
     main()
